@@ -1,7 +1,7 @@
 # Arrival test task
 
 ## Project installation
-Create `.env`-file
+Create `.env`-file:
 ```
 DB_NAME=
 DB_HOST=
@@ -10,9 +10,15 @@ DB_USER=
 DB_PASSWORD=
 ```
 
+Run:
 ```
 alembic upgrade head
+
+python main.py
 ```
+
+Open: http://127.0.0.1:8080/graphql?query={}
+
 
 ## Development
 

@@ -1,12 +1,13 @@
 import graphene as gr
+import sqlalchemy as sa
 from graphene_sqlalchemy import SQLAlchemyObjectType
 from graphene_sqlalchemy.types import ORMField
-import sqlalchemy as sa
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Feature, Vehicle, Group
 
 
-async def _resolve(schema, info):
+async def _resolve(schema, info: gr.ResolveInfo):
     return await info.context.get("session").scalars(sa.select(schema._meta.model))
 
 
@@ -51,8 +52,10 @@ class Query(gr.ObjectType):
     features = gr.List(FeatureSchema)
 
     # TODO: Implement filters.
-    def resolve_vehicles(self, info):
-        return VehicleSchema.get_query(info)
+    async def resolve_vehicles(self, info):
+        return await info.context.get("session").scalars(
+            sa.select(Vehicle).options(sa.orm.selectinload(Vehicle.features))
+        )
 
     def resolve_groups(self, info):
         return GroupSchema.get_query(info)
@@ -63,7 +66,7 @@ class Query(gr.ObjectType):
 
 class CreateVehicle(gr.Mutation):
     class Arguments:
-        name = gr.String()
+        name = gr.String(required=True)
 
     ok = gr.Boolean()
     vehicle = gr.Field(VehicleSchema)
@@ -79,7 +82,7 @@ class CreateVehicle(gr.Mutation):
 
 class CreateFeature(gr.Mutation):
     class Arguments:
-        name = gr.String()
+        name = gr.String(required=True)
 
     ok = gr.Boolean()
     feature = gr.Field(FeatureSchema)
@@ -95,23 +98,22 @@ class CreateFeature(gr.Mutation):
 
 class AddFeature(gr.Mutation):
     class Arguments:
-        feature_id = gr.Int()
-        vehicle_id = gr.Int()
+        feature_id = gr.Int(required=True)
+        vehicle_id = gr.Int(required=True)
 
     ok = gr.Boolean()
     vehicle = gr.Field(VehicleSchema)
 
     async def mutate(self, info, feature_id, vehicle_id):
-        session = info.context.get("session")
+        session: AsyncSession = info.context.get("session")
         vehicle = Vehicle(id=vehicle_id)
         feature = Feature(id=feature_id)
-        vehicle.features.append(feature)
 
         async with session.begin():
-            session.add(vehicle)
+            vehicle.features.append(feature)
+            await session.merge(vehicle)
         await session.commit()
 
-        vehicle = VehicleSchema()
         return AddFeature(ok=True, vehicle=vehicle)
 
 
