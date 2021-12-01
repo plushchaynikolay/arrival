@@ -38,3 +38,15 @@ alembic revision --autogenerate -m "Migration message"
 8. https://github.com/alexisrolland/flask-graphene-sqlalchemy
 9. https://spec.graphql.org/October2021
 10. https://github.com/jokull/python-ts-graphql-demo
+
+## TODO
+- [x] Describe database data structures (SQLAlchemy ORM)
+- [x] Set up database migrations environment (alembic)
+- [x] Set up http server (aiohttp)
+- [ ] Implement API (GraphQL, Python-Graphene):
+  - [x] Query, Create, Update Vehicles (not fully, need filters and update)
+  - [x] Query, Create, Update Features (not fully, need filters and update)
+  - [ ] Query, Create, Update Groups
+  - [ ] Query, Create, Update Functions
+  - [x] Adding Feature to Vehicle (need to fix read after write)
+- [ ] Graceful shutdown (not working :c)
