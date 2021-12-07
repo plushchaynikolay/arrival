@@ -97,4 +97,4 @@ class Vehicle(Base):
     __tablename__ = "vehicles"
     id = Column(Integer, primary_key=True)
     name = Column(String, default="")
-    features = relationship(Feature, secondary=feature_vehicle_rel)
+    features = relationship(Feature, secondary=feature_vehicle_rel, backref="vehicles")

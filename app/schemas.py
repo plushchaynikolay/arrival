@@ -6,31 +6,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Feature, Vehicle, Group
 
-
-async def _resolve(schema, info: gr.ResolveInfo):
-    return await info.context.get("session").scalars(sa.select(schema._meta.model))
+from .utils import AsyncSQLAlchemyConnectionField
 
 
-# TODO: Optimization for one-to-many and many-to-many relations. Something like:
-# https://github.com/tfoxy/graphene-django-optimizer
-class BaseSchema:
-    @classmethod
-    def get_query(cls, info):
-        return _resolve(cls, info)
-
-
-class VehicleSchema(BaseSchema, SQLAlchemyObjectType):
+class VehicleSchema(SQLAlchemyObjectType):
     # !!!: Doesn't work this way :(
     # id = ORMField(type=gr.Int)
 
     pk = ORMField("id", type=gr.Int)
+    features = AsyncSQLAlchemyConnectionField(lambda: FeatureSchema.connection)
 
     class Meta:
         model = Vehicle
         interfaces = (gr.Node,)
 
+    # TODO: Optimization for one-to-many and many-to-many relations. Something like:
+    # https://github.com/tfoxy/graphene-django-optimizer
+    def resolve_features(parent, info):
+        return sa.select(Feature).join(Feature.vehicles).where(Vehicle.id == parent.id)
 
-class FeatureSchema(BaseSchema, SQLAlchemyObjectType):
+
+class FeatureSchema(SQLAlchemyObjectType):
     pk = ORMField("id", type=gr.Int)
 
     class Meta:
@@ -38,7 +34,7 @@ class FeatureSchema(BaseSchema, SQLAlchemyObjectType):
         interfaces = (gr.Node,)
 
 
-class GroupSchema(BaseSchema, SQLAlchemyObjectType):
+class GroupSchema(SQLAlchemyObjectType):
     pk = ORMField("id", type=gr.Int)
 
     class Meta:
@@ -47,21 +43,10 @@ class GroupSchema(BaseSchema, SQLAlchemyObjectType):
 
 
 class Query(gr.ObjectType):
-    vehicles = gr.List(VehicleSchema)
-    groups = gr.List(GroupSchema)
-    features = gr.List(FeatureSchema)
-
-    # TODO: Implement filters.
-    async def resolve_vehicles(self, info):
-        return await info.context.get("session").scalars(
-            sa.select(Vehicle).options(sa.orm.selectinload(Vehicle.features))
-        )
-
-    def resolve_groups(self, info):
-        return GroupSchema.get_query(info)
-
-    def resolve_features(self, info):
-        return FeatureSchema.get_query(info)
+    node = gr.relay.Node.Field()
+    all_vehicles = AsyncSQLAlchemyConnectionField(VehicleSchema.connection)
+    all_groups = AsyncSQLAlchemyConnectionField(GroupSchema.connection)
+    all_features = AsyncSQLAlchemyConnectionField(FeatureSchema.connection)
 
 
 class CreateVehicle(gr.Mutation):
