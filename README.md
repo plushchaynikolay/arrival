@@ -1,23 +1,30 @@
 # Arrival test task
 
 ## Project installation
-Create `.env`-file:
+
+> 0. Run postgres in docker
+> 
+> ```
+> docker run -p 5432:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=arrival -d --restart=unless-stopped postgres:12.6
+> ```
+
+1. Create `.env`-file, for example:
 ```
-DB_NAME=
-DB_HOST=
-DB_PORT=
-DB_USER=
-DB_PASSWORD=
+DB_NAME=arrival
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
 ```
 
-Run:
+2. Run:
 ```
 alembic upgrade head
 
 python main.py
 ```
 
-Open: http://127.0.0.1:8080/graphql?query={}
+3. Open: http://127.0.0.1:8080/graphql?query={}
 
 
 ## Development
@@ -26,6 +33,134 @@ Writing migrations
 ```
 alembic revision --autogenerate -m "Migration message"
 ```
+
+## Examples
+### Query all vehicles and features
+```qraphql 
+{
+  allVehicles {
+    edges {
+      node {
+        pk
+        name
+        features {
+          edges {
+            node {
+              pk
+              name
+            }
+          }
+        }
+      }
+    }
+  }
+  allFeatures {
+    edges {
+      node {
+        pk
+        name
+      }
+    }
+  }
+}
+```
+```json
+{
+  "data": {
+    "allVehicles": {
+      "edges": []
+    },
+    "allFeatures": {
+      "edges": []
+    }
+  }
+}
+```
+
+### Create new vehicle and feature
+```graphql
+mutation {
+  createVehicle(name: "test vehicle 1") {
+    ok
+    vehicle {
+      pk
+      name
+    }
+  }
+  createFeature(name: "test feature 1") {
+    ok
+    feature {
+      pk
+      name
+    }
+  }
+}
+```
+```json
+{
+  "data": {
+    "createVehicle": {
+      "ok": true,
+      "vehicle": {
+        "pk": 1,
+        "name": "test vehicle 1"
+      }
+    },
+    "createFeature": {
+      "ok": true,
+      "feature": {
+        "pk": 1,
+        "name": "test feature 1"
+      }
+    }
+  }
+}
+```
+
+### Add feature to vehicle
+```graphql
+mutation {
+  addFeature(vehicleId: 1, featureId: 1) {
+    ok
+    vehicle {
+      pk
+      name
+      features {
+        edges {
+          node {
+            pk
+            name
+          }
+        }
+      }
+    }
+  }
+}
+```
+```json
+{
+  "data": {
+    "addFeature": {
+      "ok": true,
+      "vehicle": {
+        "pk": 1,
+        "name": null,
+        "features": {
+          "edges": [
+            {
+              "node": {
+                "pk": 1,
+                "name": "test feature 1"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
 
 ## References
 1. https://docs.sqlalchemy.org/en/14/orm/basic_relationships.html
@@ -44,9 +179,9 @@ alembic revision --autogenerate -m "Migration message"
 - [x] Set up database migrations environment (alembic)
 - [x] Set up http server (aiohttp)
 - [ ] Implement API (GraphQL, Python-Graphene):
-  - [x] Query, Create, Update Vehicles (not fully, need filters and update)
-  - [x] Query, Create, Update Features (not fully, need filters and update)
-  - [ ] Query, Create, Update Groups
-  - [ ] Query, Create, Update Functions
-  - [x] Adding Feature to Vehicle (need to fix read after write)
-- [ ] Graceful shutdown (not working :c)
+  - [x] Query, Create, Update Vehicles (need filters and update)
+  - [x] Query, Create, Update Features (need filters and update)
+  - [ ] ~~Query, Create, Update Groups~~
+  - [ ] ~~Query, Create, Update Functions~~
+  - [x] Adding Feature to Vehicle
+- [x] Graceful shutdown (need improvement)

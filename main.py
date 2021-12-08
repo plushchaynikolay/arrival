@@ -1,5 +1,6 @@
+import asyncio
 import logging
-from asyncio import current_task
+
 from aiohttp import web
 from aiohttp_graphql.graphqlview import GraphQLView
 from graphql.execution.executors.asyncio import AsyncioExecutor
@@ -20,15 +21,20 @@ async def app() -> web.Application:
     engine = create_async_engine(config.DB_URL)
     session = async_scoped_session(
         sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False),
-        current_task,
+        asyncio.current_task,
     )
 
-    # !!!: Graceful shutdown doesn't work, connections don't close as expected :(
     async def dispose_engine(app):
+        for s in session.registry.registry.values():
+            await s.close()
+        await session.remove()
         await engine.dispose()
 
-    app = web.Application()
-    app.on_cleanup.append(dispose_engine)
+    app = web.Application(
+        # TODO: close scoped session after every request
+        # middlewares=[request_shutdown],
+    )
+    app.on_shutdown.append(dispose_engine)
 
     GraphQLView.attach(
         app,

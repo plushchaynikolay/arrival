@@ -43,7 +43,6 @@ class GroupSchema(SQLAlchemyObjectType):
 
 
 class Query(gr.ObjectType):
-    node = gr.relay.Node.Field()
     all_vehicles = AsyncSQLAlchemyConnectionField(VehicleSchema.connection)
     all_groups = AsyncSQLAlchemyConnectionField(GroupSchema.connection)
     all_features = AsyncSQLAlchemyConnectionField(FeatureSchema.connection)
